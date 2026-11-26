@@ -1,6 +1,6 @@
 # WSCore_Email
 
-Serviço compartilhado de **envio de e-mail** do WSCore (SMTP — AWS SES). Guarda a configuração do servidor de envio num só lugar; os outros módulos só informam **destinatário(s), assunto e corpo** (texto/HTML) ou um **template com variáveis** e recebem de volta sucesso ou um erro claro. Conecta ao Core via Socket.IO, registra cada envio em `_Core_Email_Envios` e não tem tela.
+Serviço compartilhado de **envio de e-mail** do WSCore (SMTP — AWS SES). Guarda a configuração do servidor de envio num só lugar; os outros módulos só informam **destinatário(s), assunto e corpo** (texto/HTML) ou um **template com variáveis** e recebem de volta sucesso ou um erro claro. Conecta ao Core via Socket.IO, registra cada envio em `_Core_Email_Envios` e tem uma **tela** de histórico, uso e controle de limites (veja [Tela](#tela-histórico-uso-e-limites)).
 
 O primeiro cliente é o `WS-Mod_FibraMap` (e-mail de aprovação de Pré-Viabilidade).
 
@@ -39,6 +39,7 @@ Release (padrão dos demais módulos, via `standard-version`): `npm run release`
 {
   "BD":   { "Usuario": "root", "Senha": "", "Database": "wscore", "Host": "127.0.0.1", "Porta": 3306 },
   "Core": { "Host": "127.0.0.1", "Porta": 7000, "Segredo": "", "TimeoutMs": 35000 },
+  "WebFiles": { "Pasta_Arquivos_Html": "./Views/_web" },   // telas servidas ao WebServer (evento webfiles)
   "SMTP": {
     "Modo": "smtp",            // "smtp" envia de verdade; "simulado" não envia nada (desenvolvimento)
     "Host": "",                // AWS SES: email-smtp.<região>.amazonaws.com
@@ -112,7 +113,10 @@ Resposta de erro (`mensagem` é segura para exibir; `codigo` serve para decidir 
 | `validacao` | pacote inválido, variável de template faltando | não — corrija o pedido |
 | `template_invalido` | template inexistente/incompleto | não |
 | `nao_autorizado` | módulo fora de `ModulosPermitidos` / sem permissão | não |
-| `limite_excedido` | rate limit | sim, mais tarde |
+| `limite_excedido` | rate limit do config.cfg (`RateLimit`) | sim, mais tarde (segundos) |
+| `limite_diario` | o pedido faria o consumo de hoje passar do **limite diário** definido na tela (ver [Limites e pausa](#limites-diário-e-mensal-e-pausa)); nada foi enviado nem registrado | sim, a partir da meia-noite (Brasília) ou se o limite for aumentado |
+| `limite_mensal` | idem para o **limite mensal** | sim, a partir do dia 1º do mês seguinte ou se o limite for aumentado |
+| `pausado` | chave **"pausar envios"** ligada na tela; nada foi enviado nem registrado | sim, depois que um administrador desligar a pausa (não adianta repetir em loop) |
 | `nao_configurado` | SMTP sem credenciais | não — falta configurar o módulo |
 | `smtp_autenticacao` | usuário/senha SMTP recusados | não — corrigir config |
 | `smtp_conexao`, `smtp_timeout` | rede/servidor SMTP | sim, mais tarde |
@@ -168,11 +172,55 @@ if (r.status !== "OK") {
 
 Observações para a integração: `emit` com callback sempre responde (o Core indisponível ou o módulo de e-mail fora do ar volta como `{ status: "Erro" }`); o tempo máximo de uma chamada é o `Core.TimeoutMs` do FibraMap (35 s) e o do SMTP é `SMTP.TimeoutMs` (20 s); o campo `token` só é lido se `ExigirPermissaoUsuario` estiver ligado.
 
+## Tela: histórico, uso e limites
+
+Menu **E-mail** (ícone `mail`) com duas telas, criadas pelo `setup`/inicialização em `_Menus` (veja `Server/SQL/data_Core_Email_Tela.sql`) e servidas pelo próprio módulo via evento `webfiles` (arquivos em `Views/_web/{js,css}`; só `.html .js .css .json .svg .txt .map`, com bloqueio de traversal):
+
+- **Histórico de envios** (`email/historico`, `Controle_Tela_Tabela`): tabela sobre `_Core_Email_Envios` — data/hora, módulo solicitante, referência, destinatários, assunto, template, status (enviado/falhou/enviando), código do erro, tamanho/anexos. Pesquisa por texto, filtros de status, módulo e período, paginação e ordenação **no servidor** (as colunas ordenáveis são uma lista fixa; texto vindo da tela nunca entra no SQL — vai por parâmetro). Selecione uma linha e use **Detalhes** para ver o envio por inteiro (destinatários completos, `Message-ID`, detalhe do erro). O corpo da mensagem e os anexos não são guardados.
+- **Uso e limites** (`email/uso`, tela livre): enviados na última hora, hoje e no mês contra os limites (barra de % e cor por faixa: verde normal, âmbar a partir do % de alerta, vermelho esgotado), taxa de falha, série de 7 ou 30 dias, quebra por módulo e por status, últimos erros, os limites do `config.cfg` em **somente leitura**, o histórico de alterações de limite e o formulário de **controle** (só para quem tem `email.administrar`).
+
+> **Atenção — destinatários:** `para`, `cc` e `bcc` são gravados como foram enviados (endereços completos; só o texto do campo `erro` mascara e-mails). A tela mostra o que está no banco, por isso o acesso é controlado por permissão. Se isso não for desejado, mascare na consulta de `Historico_Email.ts`.
+
+### Permissões
+
+Criadas por `npm run setup` (e a cada subida) na `_Permissoes` do Autenticador; atribua-as a um perfil:
+
+| Permissão | Permite |
+|---|---|
+| `email.visualizar` | ver o menu, o histórico, o uso e os limites (somente leitura) |
+| `email.administrar` | além disso, alterar limites/alerta e pausar/retomar os envios (exige também `email.visualizar` para abrir a tela) |
+| `email.enviar` | só usada se `Autorizacao.ExigirPermissaoUsuario` estiver ligado (pedido de envio com token de usuário) |
+
+Os eventos da tela (`email/historico/listar`, `email/historico/obter`, `email/historico/opcoes`, `email/uso/resumo`, `email/controle/salvar`) são chamados pelo **navegador** (via WebServer). Por isso, ao contrário de `email/enviar` (que só aceita módulos de `ModulosPermitidos`), **cada um valida o token do usuário e a permissão no Autenticador** (`usuarios/logintoken` + `usuarios/autorizar`, igual ao FibraMap) antes de tocar no banco — fail-closed: token ausente/inválido, Autenticador fora do ar ou permissão negada recusam com `codigo: "nao_autorizado"`. O Autenticador_Cliente guarda o resultado por até 30 s, então revogar um acesso vale em até 30 s. O botão de salvar some para quem só visualiza, mas quem vale é a checagem do servidor em `email/controle/salvar`.
+
+### Limites (diário e mensal) e pausa
+
+Guardados no banco (`_Core_Email_Configuracao`: `limite_diario`, `limite_mensal`, `percentual_alerta`, `pausado`, com quem alterou e quando) e editados na tela. **Padrão: limites 0 (= sem limite), alerta em 80%, sem pausa.** Valem para o **módulo todo** (não por módulo solicitante). Os limites do `config.cfg` (`RateLimit`, `Email.Limites`, `ModulosPermitidos`) continuam valendo à parte e aparecem na tela só para leitura.
+
+Validação do formulário (cliente e servidor): somente inteiros; diário 0 a 1.000.000, mensal 0 a 10.000.000, alerta 1 a 100, pausa verdadeiro/falso; campo desconhecido é recusado; diário maior que o mensal (quando ambos > 0) é recusado.
+
+**Como o envio respeita isso** (`email/enviar`, nesta ordem, antes de enviar ou registrar qualquer coisa): rate limit do config.cfg → **pausa** (`pausado`) → **diário** (`consumo de hoje + destinatários do pedido > limite` → `limite_diario`) → **mensal** (`limite_mensal`). O pedido que ultrapassaria o limite é bloqueado **inteiro** (não envia parte dos destinatários). Se o banco falhar ao ler o controle, o e-mail não é enviado (`interno`). A conferência e a reserva do saldo são feitas em fila no processo, então pedidos simultâneos não passam juntos pelo mesmo saldo (uma instância do módulo por banco).
+
+**Regra de consumo — a unidade é o destinatário aceito** (como a cota do AWS SES, que conta por destinatário):
+
+| Situação | Consome cota? |
+|---|---|
+| `enviado` | sim, os destinatários que o servidor SMTP **aceitou** (`qtd_aceitos`; recusa parcial não conta) |
+| `falhou` | não |
+| `enviando` | sim, como **reserva** (`qtd_destinatarios`), mas só por 10 minutos — registro "enviando" mais velho é de um processo que caiu e deixa de contar |
+| pedido recusado antes do SMTP (validação, autorização, rate limit, limite, pausa) | não — nem entra na tabela (fica só no log de arquivo, sem endereços) |
+
+**"Hoje" e "mês" são no fuso America/Sao_Paulo** (UTC-3): o módulo grava `criado_em`/`concluido_em` nesse horário e calcula todos os períodos nele (virada à meia-noite de Brasília, dia 1º do mês), independente do fuso do servidor ou do banco. Registros gravados pela versão 0.1.0 (sem fuso definido) podem ficar deslocados se o banco não estava em Brasília — afeta só o histórico antigo.
+
+O aviso de alerta aparece no topo da tela de uso quando o consumo passa do % de alerta (âmbar), quando esgota (vermelho) e quando há pausa. **Toda alteração** de limite/alerta/pausa grava um registro em `_Core_Email_Configuracao_Historico` (chave, valor antes/depois, usuário, horário) **antes** de mudar o valor — se a auditoria falhar, nada muda — e uma linha no log (`[Email] Controle alterado pelo usuário #id: limite_diario 0 -> 500`). Só números e a chave de pausa: nenhum segredo.
+
+Bancos criados na 0.1.0 ganham as colunas `qtd_destinatarios`/`qtd_aceitos` (preenchidas a partir de `para`+`cc`+`bcc` e do status) na primeira subida desta versão.
+
 ## Log de envios: `_Core_Email_Envios`
 
 Uma linha por pedido que chegou a tentar o envio (pedidos recusados por validação, autorização ou rate limit vão só para o log de arquivo, sem endereços). Gravada **antes** de enviar (`enviando`) e atualizada depois (`enviado` / `falhou`); se não for possível gravar, o e-mail **não** é enviado.
 
-Colunas: `id`, `criado_em`, `concluido_em`, `solicitante_modulo`, `usuario_id` (só com `ExigirPermissaoUsuario`), `referencia`, `para`, `cc`, `bcc`, `assunto`, `template`, `qtd_anexos`, `tamanho_bytes`, `transporte`, `status`, `message_id`, `erro_codigo`, `erro` (sem segredos; e-mails mascarados). O corpo e os anexos **não** são guardados. A tabela não é limpa automaticamente — apague registros antigos conforme a política de retenção (`DELETE FROM _Core_Email_Envios WHERE criado_em < ...`).
+Colunas: `id`, `criado_em`, `concluido_em`, `solicitante_modulo`, `usuario_id` (só com `ExigirPermissaoUsuario`), `referencia`, `para`, `cc`, `bcc`, `assunto`, `template`, `qtd_anexos`, `tamanho_bytes`, `qtd_destinatarios`, `qtd_aceitos`, `transporte`, `status`, `message_id`, `erro_codigo`, `erro` (sem segredos; e-mails mascarados). O corpo e os anexos **não** são guardados. As datas ficam em horário de São Paulo. A tabela não é limpa automaticamente — apague registros antigos conforme a política de retenção (`DELETE FROM _Core_Email_Envios WHERE criado_em < ...`).
 
 ```sql
 SELECT id, criado_em, solicitante_modulo, referencia, status, erro_codigo FROM _Core_Email_Envios ORDER BY id DESC LIMIT 50;
@@ -186,11 +234,14 @@ Server/
   Install.ts                 # npm run setup
   Controllers/
     Email/                   # Socket_Email (eventos), Config_Email (serviço), Validacao_Email,
-                             # Templates_Email, Transporte_Email (SMTP/simulado), Autorizacao_Email, Limitador_Taxa
+                             # Templates_Email, Transporte_Email (SMTP/simulado), Autorizacao_Email, Limitador_Taxa,
+                             # Controle_Email (limites/pausa), Uso_Email (consumo/painel), Historico_Email (consultas),
+                             # Relogio_Email (fuso de SP), Socket_Email_Tela (eventos da tela, por permissão)
     Lib/                     # Logger, Configuracao, Conector_Mysql, Erros, Autenticador_Cliente
-    Modulos/Socket_Client.ts # handshake e cliente do Core
+    Modulos/                 # Socket_Client (handshake com o Core), Socket_WebFiles (telas)
   Models/                    # Modelo_Configuracao, Modelo_Config_JSON.json, Email/Tipos, Modulos/*
-  SQL/                       # schema_Core_Email.sql, data_Core_Email.sql
+  SQL/                       # schema_Core_Email*.sql, data_Core_Email.sql (permissão de envio), data_Core_Email_Tela.sql (menu + permissões da tela)
   Templates/                 # um diretório por template
+Views/_web/{js,css}/         # telas (Email.js, Email.css), servidas via webfiles
 tests/                       # node:test (npm test)
 ```
