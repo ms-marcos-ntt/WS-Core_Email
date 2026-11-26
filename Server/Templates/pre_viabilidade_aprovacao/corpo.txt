@@ -1,0 +1,12 @@
+Olá, {{nome_destinatario}}!
+
+A Pré-Viabilidade {{codigo}} foi solicitada por {{solicitante}} e aguarda a sua aprovação.
+
+Cliente: {{cliente}}
+Endereço: {{endereco}}
+
+Para analisar e aprovar, acesse:
+{{link_aprovacao}}
+
+--
+Mensagem automática do FibraMap (TurboOne). Não responda a este e-mail.

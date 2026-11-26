@@ -1,0 +1,6 @@
+{{titulo}}
+
+{{mensagem}}
+
+--
+Mensagem automática do TurboOne. Não responda a este e-mail.
