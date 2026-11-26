@@ -1,0 +1,89 @@
+/* WSCore_Email — telas de histórico e uso. Só variáveis do tema do WSCore; classes com prefixo email_ */
+
+/* ── Tela de uso ───────────────────────────────────────────────────────────────── */
+.email_uso { padding: 16px 20px 32px; color: var(--texto_primario); font-family: var(--font_principal); height: 100%; overflow-y: auto; box-sizing: border-box; }
+.email_uso_header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.email_uso_header h2 { margin: 0; font-size: 1.2em; }
+.email_uso_acoes { display: flex; align-items: center; gap: 10px; }
+.email_uso_acoes label { color: var(--texto_secundario); font-size: 0.85em; display: flex; align-items: center; gap: 6px; }
+.email_carregando, .email_vazio { color: var(--texto_secundario); }
+
+.email_btn { background: var(--bg_terciario); color: var(--texto_primario); border: 1px solid var(--border_sutil); border-radius: 4px; padding: 6px 14px; cursor: pointer; font-family: var(--font_principal); font-size: 1em; }
+.email_btn:hover { border-color: var(--accent_border, var(--accent)); }
+.email_btn_primario { background: var(--accent); color: #fff; border-color: var(--accent); }
+.email_btn[disabled] { opacity: 0.5; cursor: default; }
+
+.email_aviso { border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; font-size: 0.92em; border: 1px solid; }
+.email_aviso_aviso { background: rgba(255, 167, 38, 0.12); border-color: var(--cor_aviso); color: var(--cor_aviso); }
+.email_aviso_erro { background: rgba(239, 83, 80, 0.12); border-color: var(--cor_erro); color: var(--cor_erro); }
+
+.email_cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.email_card { background: var(--bg_secundario); border: 1px solid var(--border_sutil); border-radius: 8px; padding: 14px 18px; flex: 1 1 210px; min-width: 190px; }
+.email_card_rotulo { font-size: 0.8em; color: var(--texto_secundario); text-transform: uppercase; letter-spacing: 0.04em; }
+.email_card_valor { font-size: 1.9em; font-weight: 700; margin: 6px 0; }
+.email_card_de { font-size: 0.45em; font-weight: 400; color: var(--texto_secundario); }
+.email_card_pct { font-size: 0.82em; color: var(--texto_secundario); }
+.email_card_rodape { font-size: 0.75em; color: var(--texto_terciario); margin-top: 4px; }
+.email_barra { height: 8px; background: var(--bg_quaternario); border-radius: 4px; overflow: hidden; margin: 6px 0; }
+.email_barra_valor { height: 100%; background: var(--cor_sucesso); border-radius: 4px; }
+.email_faixa_alerta .email_barra_valor { background: var(--cor_aviso); }
+.email_faixa_esgotado .email_barra_valor { background: var(--cor_erro); }
+.email_faixa_alerta { border-color: var(--cor_aviso); }
+.email_faixa_esgotado { border-color: var(--cor_erro); }
+.email_faixa_esgotado .email_card_valor { color: var(--cor_erro); }
+
+.email_secao { margin-bottom: 22px; flex: 1 1 360px; min-width: 0; }
+.email_secao h3 { font-size: 0.95em; color: var(--texto_secundario); margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+.email_secao h3 small { text-transform: none; letter-spacing: 0; color: var(--texto_terciario); }
+.email_duas { display: flex; flex-wrap: wrap; gap: 20px; }
+
+.email_tabela { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+.email_tabela th { text-align: left; color: var(--texto_secundario); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--border_primario); }
+.email_tabela td { padding: 6px 8px; border-bottom: 1px solid var(--border_sutil); }
+.email_n { text-align: right; font-variant-numeric: tabular-nums; }
+.email_lista { margin: 0 0 8px; padding-left: 18px; font-size: 0.9em; line-height: 1.7; }
+
+.email_grafico { position: relative; background: var(--bg_secundario); border: 1px solid var(--border_sutil); border-radius: 8px; padding: 12px 12px 8px; }
+.email_grafico svg { display: block; width: 100%; height: 150px; }
+.email_g_ok { fill: var(--cor_sucesso); background: var(--cor_sucesso); }
+.email_g_falha { fill: var(--cor_erro); background: var(--cor_erro); }
+.email_g_datas { position: relative; height: 18px; font-size: 0.72em; color: var(--texto_terciario); }
+.email_g_datas span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.email_legenda { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.78em; color: var(--texto_secundario); margin-top: 6px; }
+.email_legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }
+.email_dim { color: var(--texto_terciario); }
+.email_chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.email_chip { background: var(--bg_terciario); border: 1px solid var(--border_sutil); border-radius: 12px; padding: 4px 10px; font-size: 0.8em; }
+
+/* ── Badges e códigos (lista e detalhe) ───────────────────────────────────────── */
+.email_badge { display: inline-block; border-radius: 10px; padding: 1px 9px; font-size: 0.82em; font-weight: 600; background: var(--bg_quaternario); color: var(--texto_secundario); }
+.email_badge_enviado { background: rgba(38, 166, 154, 0.18); color: var(--cor_sucesso); }
+.email_badge_falhou { background: rgba(239, 83, 80, 0.18); color: var(--cor_erro); }
+.email_badge_enviando { background: rgba(255, 167, 38, 0.18); color: var(--cor_aviso); }
+.email_codigo { font-family: var(--font_mono); font-size: 0.85em; color: var(--cor_erro); }
+
+/* ── Formulários e modais ─────────────────────────────────────────────────────── */
+.email_form { display: flex; flex-direction: column; gap: 12px; }
+.email_form label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85em; color: var(--texto_secundario); flex: none; }
+.email_linha > label { flex: 1 1 160px; }
+.email_form input[type="text"], .email_form input[type="date"], .email_form select { background: var(--bg_primario); color: var(--texto_primario); border: 1px solid var(--border_primario); border-radius: 4px; padding: 7px 9px; font-family: var(--font_principal); }
+.email_form input[disabled] { opacity: 0.6; }
+.email_form small { color: var(--texto_terciario); }
+.email_linha { display: flex; gap: 12px; flex-wrap: wrap; }
+.email_check { flex-direction: row !important; align-items: center; gap: 8px !important; color: var(--texto_primario) !important; }
+.email_erro_form { color: var(--cor_erro); margin: 0; font-size: 0.88em; }
+.email_form_dica { color: var(--texto_terciario); font-size: 0.8em; margin: 4px 0; }
+.email_controle { background: var(--bg_secundario); border: 1px solid var(--border_sutil); border-radius: 8px; padding: 14px 18px; }
+
+.email_modal_overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+.email_modal { background: var(--bg_secundario); color: var(--texto_primario); border: 1px solid var(--border_primario); border-radius: 10px; padding: 20px 22px; max-width: 94vw; max-height: 90vh; overflow-y: auto; font-family: var(--font_principal); }
+.email_modal_larga { width: min(720px, 94vw); }
+.email_modal h3 { margin: 0 0 12px; font-size: 1.1em; display: flex; align-items: center; gap: 10px; }
+.email_modal_acoes { display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px; }
+.email_detalhe { margin: 0; display: grid; gap: 2px; }
+.email_det_linha { display: grid; grid-template-columns: 170px 1fr; gap: 12px; padding: 5px 0; border-bottom: 1px solid var(--border_sutil); font-size: 0.9em; }
+.email_det_linha dt { color: var(--texto_secundario); }
+.email_det_linha dd { margin: 0; overflow-wrap: anywhere; }
+.email_pre { margin: 0; white-space: pre-wrap; font-family: var(--font_mono); font-size: 0.85em; background: var(--bg_primario); padding: 8px; border-radius: 4px; }
+
+@media (max-width: 640px) { .email_det_linha { grid-template-columns: 1fr; gap: 2px; } .email_uso { padding: 12px; } }
