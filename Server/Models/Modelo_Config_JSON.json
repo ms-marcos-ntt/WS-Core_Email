@@ -1,0 +1,57 @@
+{
+  "BD": {
+    "Usuario": "root",
+    "Senha": "",
+    "Database": "wscore",
+    "Host": "127.0.0.1",
+    "Porta": 3306
+  },
+  "Core": {
+    "Host": "127.0.0.1",
+    "Porta": 7000,
+    "Segredo": "",
+    "TimeoutMs": 35000
+  },
+  "LOG": {
+    "Console": true,
+    "Arquivo": true,
+    "LocalArquivo": "./log/wscore_email/",
+    "Rotatividade": 86400
+  },
+  "SMTP": {
+    "Modo": "smtp",
+    "Host": "",
+    "Porta": 587,
+    "Seguro": false,
+    "Usuario": "",
+    "Senha": "",
+    "Remetente": "",
+    "TimeoutMs": 20000
+  },
+  "Email": {
+    "PastaTemplates": "./Server/Templates",
+    "Limites": {
+      "MaxDestinatarios": 50,
+      "MaxAssunto": 200,
+      "MaxTexto": 100000,
+      "MaxHtml": 200000,
+      "MaxAnexos": 3,
+      "MaxAnexoBytes": 1048576,
+      "MaxTotalAnexosBytes": 2097152
+    }
+  },
+  "Autorizacao": {
+    "ModulosPermitidos": ["WSMod_FibraMap"],
+    "ExigirPermissaoUsuario": false,
+    "PermissaoEnvio": "email.enviar"
+  },
+  "RateLimit": {
+    "JanelaSegundos": 60,
+    "MaximoPorModulo": 30,
+    "MaximoGlobal": 120
+  },
+  "modulo": {
+    "nome": "WSCore_Email",
+    "versao": "0.1.0"
+  }
+}
