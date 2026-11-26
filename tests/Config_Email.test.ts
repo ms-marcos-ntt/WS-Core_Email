@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import { Banco_Falso, Config_Teste } from "./Helpers";
 import { NaRaiz } from "../Server/Controllers/Lib/Configuracao";
 import { Config_Email } from "../Server/Controllers/Email/Config_Email";
+import { Servico_Controle } from "../Server/Controllers/Email/Controle_Email";
+import { Relogio } from "../Server/Controllers/Email/Relogio_Email";
 import { Limitador_Taxa } from "../Server/Controllers/Email/Limitador_Taxa";
 import { Templates_Email } from "../Server/Controllers/Email/Templates_Email";
 import { Transporte_Email, Transporte_SMTP, Transporte_Simulado } from "../Server/Controllers/Email/Transporte_Email";
@@ -20,7 +22,7 @@ function montar(extra: Record<string, unknown> = {}, transporteCustom?: Transpor
   const bd = new Banco_Falso();
   const transporte = transporteCustom ?? new Transporte_Simulado();
   const limitador = new Limitador_Taxa(config.RateLimit.JanelaSegundos * 1000, config.RateLimit.MaximoPorModulo, config.RateLimit.MaximoGlobal);
-  const servico = new Config_Email(config, bd, transporte, new Templates_Email(NaRaiz(config.Email.PastaTemplates)), limitador);
+  const servico = new Config_Email(config, bd, transporte, new Templates_Email(NaRaiz(config.Email.PastaTemplates)), limitador, new Servico_Controle(bd, new Relogio()));
   return { config, bd, transporte: transporte as Transporte_Simulado, servico };
 }
 
@@ -49,10 +51,13 @@ test("envio simulado: entrega a mensagem, registra antes e depois e devolve o re
   // INSERT (enviando) antes, UPDATE (enviado) depois
   assert.equal(bd.inserts.length, 1);
   assert.match(bd.inserts[0].sql, /'enviando'/);
-  assert.deepEqual(bd.inserts[0].valores.slice(0, 4), ["WSMod_FibraMap", null, "fibramap:pv:7", "ana@exemplo.com.br"]);
+  assert.deepEqual(bd.inserts[0].valores.slice(1, 5), ["WSMod_FibraMap", null, "fibramap:pv:7", "ana@exemplo.com.br"]);
   assert.equal(bd.updates.length, 1);
   assert.deepEqual(bd.updates[0].valores.slice(0, 2), ["enviado", r.messageId]);
-  assert.equal(bd.updates[0].valores[4], 1);
+  assert.equal(bd.updates[0].valores[4], 3, "qtd_aceitos");
+  assert.equal(bd.updates[0].valores[6], 1, "id do registro");
+  assert.equal(bd.inserts[0].valores[12], 3, "qtd_destinatarios");
+  assert.match(String(bd.inserts[0].valores[0]), /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/, "criado_em no formato SP");
 });
 
 test("só HTML: gera a parte texto automaticamente", async () => {
@@ -68,7 +73,7 @@ test("template com variáveis: assunto e corpo vêm do template e o nome do temp
   const m = transporte.Enviadas[0];
   assert.equal(m.assunto, "Aviso");
   assert.match(m.html!, /&lt;b&gt;x&lt;\/b&gt;/);
-  assert.equal(bd.inserts[0].valores[7], "generico");
+  assert.equal(bd.inserts[0].valores[8], "generico");
 });
 
 test("entrada inválida é recusada ANTES de qualquer registro ou envio", async () => {
@@ -144,7 +149,7 @@ test("SMTP não configurado: erro claro dizendo o que preencher, registrado como
   const config = Config_Teste({ SMTP: { Modo: "smtp" } });
   const bd = new Banco_Falso();
   const servico = new Config_Email(config, bd, new Transporte_SMTP(config.SMTP, () => { throw new Error("não deveria criar conexão"); }),
-    new Templates_Email(NaRaiz(config.Email.PastaTemplates)), new Limitador_Taxa(60_000, 30, 120));
+    new Templates_Email(NaRaiz(config.Email.PastaTemplates)), new Limitador_Taxa(60_000, 30, 120), new Servico_Controle(bd, new Relogio()));
   await assert.rejects(servico.Enviar(solicitante, pedido), (e: unknown) => {
     assert.ok(e instanceof Erro_Email);
     assert.equal(e.codigo, "nao_configurado");
@@ -159,12 +164,12 @@ test("Ping informa transporte e se está configurado, sem expor segredos", async
   const smtp = montar({ SMTP: { Modo: "smtp", Host: "email-smtp.us-east-1.amazonaws.com", Usuario: "U1234", Senha: "S3gredo!", Remetente: "TurboOne <nao-responda@exemplo.com.br>" } });
   const naoConfigurado = montar({ SMTP: { Modo: "smtp" } });
   const config: Modelo_Configuracao = smtp.config;
-  const comSmtp = new Config_Email(config, smtp.bd, new Transporte_SMTP(config.SMTP), new Templates_Email(NaRaiz(config.Email.PastaTemplates)), new Limitador_Taxa(1000, 1, 1));
+  const comSmtp = new Config_Email(config, smtp.bd, new Transporte_SMTP(config.SMTP), new Templates_Email(NaRaiz(config.Email.PastaTemplates)), new Limitador_Taxa(1000, 1, 1), new Servico_Controle(smtp.bd, new Relogio()));
   const p1 = await comSmtp.Ping();
   assert.deepEqual(p1, { modulo: "WSCore_Email", versao: "0.1.0", transporte: "smtp", configurado: true });
   assert.doesNotMatch(JSON.stringify(p1), /S3gredo|U1234|amazonaws/);
 
-  const semConfig = new Config_Email(naoConfigurado.config, naoConfigurado.bd, new Transporte_SMTP(naoConfigurado.config.SMTP), new Templates_Email(NaRaiz("./Server/Templates")), new Limitador_Taxa(1000, 1, 1));
+  const semConfig = new Config_Email(naoConfigurado.config, naoConfigurado.bd, new Transporte_SMTP(naoConfigurado.config.SMTP), new Templates_Email(NaRaiz("./Server/Templates")), new Limitador_Taxa(1000, 1, 1), new Servico_Controle(naoConfigurado.bd, new Relogio()));
   assert.equal((await semConfig.Ping()).configurado, false);
   assert.equal((await montar().servico.Ping()).transporte, "simulado");
 });

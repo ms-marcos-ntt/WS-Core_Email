@@ -16,6 +16,8 @@ export interface Chamada_Banco { sql: string; valores: unknown[] }
 /** Banco em memória: guarda as chamadas e devolve insertId crescente. Pode ser forçado a falhar. */
 export class Banco_Falso {
   public readonly chamadas: Chamada_Banco[] = [];
+  /** Respostas roteiradas de Query: a primeira cujo padrão casar com o SQL. */
+  public respostas: Array<{ padrao: RegExp; linhas: any[] }> = [];
   public falharInsert = false;
   public falharUpdate = false;
   private proximoId = 1;
@@ -32,7 +34,8 @@ export class Banco_Falso {
 
   public async Query(sql: string, valores: unknown[] = []): Promise<any[]> {
     this.chamadas.push({ sql, valores });
-    return [{ 1: 1 }];
+    const roteirada = this.respostas.find((r) => r.padrao.test(sql));
+    return roteirada ? roteirada.linhas : [{ 1: 1 }];
   }
 
   public get inserts(): Chamada_Banco[] { return this.chamadas.filter((c) => /^\s*INSERT/i.test(c.sql)); }

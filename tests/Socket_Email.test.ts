@@ -13,6 +13,8 @@ import { Socket_Client } from "../Server/Controllers/Modulos/Socket_Client";
 import { Modulos_Struct } from "../Server/Models/Modulos/Modulos_Struct";
 import { Autorizacao_Email, Resolvedor_Modulos_Core } from "../Server/Controllers/Email/Autorizacao_Email";
 import { Config_Email } from "../Server/Controllers/Email/Config_Email";
+import { Servico_Controle } from "../Server/Controllers/Email/Controle_Email";
+import { Relogio } from "../Server/Controllers/Email/Relogio_Email";
 import { Limitador_Taxa } from "../Server/Controllers/Email/Limitador_Taxa";
 import { Socket_Email } from "../Server/Controllers/Email/Socket_Email";
 import { Templates_Email } from "../Server/Controllers/Email/Templates_Email";
@@ -54,7 +56,7 @@ async function montar(extra: Record<string, unknown> = {}) {
   const bd = new Banco_Falso();
   const transporte = new Transporte_Simulado();
   const servico = new Config_Email(config, bd, transporte, new Templates_Email(NaRaiz(config.Email.PastaTemplates)),
-    new Limitador_Taxa(config.RateLimit.JanelaSegundos * 1000, config.RateLimit.MaximoPorModulo, config.RateLimit.MaximoGlobal));
+    new Limitador_Taxa(config.RateLimit.JanelaSegundos * 1000, config.RateLimit.MaximoPorModulo, config.RateLimit.MaximoGlobal), new Servico_Controle(bd, new Relogio()));
   const autorizacao = new Autorizacao_Email(config.Autorizacao, new Resolvedor_Modulos_Core(cliente));
   new Socket_Email(cliente, servico, autorizacao).Registrar();
   await cliente.Connect();
@@ -90,7 +92,7 @@ test("email/enviar: módulo permitido envia e recebe { status: OK, dados }", asy
   assert.equal(r.dados.transporte, "simulado");
   assert.equal(transporte.Enviadas.length, 1);
   assert.equal(transporte.Enviadas[0].assunto, "Aprovação");
-  assert.equal(bd.inserts[0].valores[0], "WSMod_FibraMap");
+  assert.equal(bd.inserts[0].valores[1], "WSMod_FibraMap");
 });
 
 test("email/enviar com template", async () => {
