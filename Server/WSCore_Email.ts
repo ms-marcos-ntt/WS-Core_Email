@@ -11,6 +11,11 @@ import { Autorizacao_Email, Resolvedor_Modulos_Core } from "./Controllers/Email/
 import { Config_Email } from "./Controllers/Email/Config_Email";
 import { Limitador_Taxa } from "./Controllers/Email/Limitador_Taxa";
 import { Socket_Email } from "./Controllers/Email/Socket_Email";
+import { Socket_Email_Tela } from "./Controllers/Email/Socket_Email_Tela";
+import { Servico_Controle } from "./Controllers/Email/Controle_Email";
+import { Historico_Email } from "./Controllers/Email/Historico_Email";
+import { Relogio } from "./Controllers/Email/Relogio_Email";
+import { Socket_WebFiles } from "./Controllers/Modulos/Socket_WebFiles";
 import { Templates_Email } from "./Controllers/Email/Templates_Email";
 import { Criar_Transporte, Transporte_Email } from "./Controllers/Email/Transporte_Email";
 
@@ -111,11 +116,16 @@ async function iniciar(): Promise<void> {
     Number(config.RateLimit.MaximoGlobal),
   );
   const templates = new Templates_Email(NaRaiz(config.Email.PastaTemplates));
-  const servico = new Config_Email(config, bd, transporte, templates, limitador);
+  const relogio = new Relogio();
+  const controle = new Servico_Controle(bd, relogio);
+  const servico = new Config_Email(config, bd, transporte, templates, limitador, controle, relogio);
   const autorizacao = new Autorizacao_Email(config.Autorizacao, new Resolvedor_Modulos_Core(core), new Autenticador_Cliente(core));
 
   // Listeners antes da conexão: nenhum pacote chega sem handler
   new Socket_Email(core, servico, autorizacao, segredos).Registrar();
+  // Telas (histórico, uso e limites): eventos chamados pelo navegador, autorizados por usuário/permissão no Autenticador
+  new Socket_WebFiles(config, core).Registrar();
+  new Socket_Email_Tela(core, config, bd, new Historico_Email(bd), controle, new Autenticador_Cliente(core), relogio, segredos).Registrar();
 
   // Se o Core estiver fora, continua tentando; refaz o registro a cada reconexão
   await core.Connect();

@@ -17,6 +17,8 @@ export interface Modelo_Configuracao {
   /** Conexão com o Core. Segredo = Core.SegredoModulos do WS-Core (vazio = não envia). */
   Core: { Host: string; Porta: number; Segredo: string; TimeoutMs: number };
   LOG: { Console: boolean; Arquivo: boolean; LocalArquivo: string; Rotatividade: number };
+  /** Pasta (relativa à raiz do módulo) das telas servidas pelo evento `webfiles`. */
+  WebFiles: { Pasta_Arquivos_Html: string };
   /**
    * Servidor de envio. Modo "smtp" envia de verdade (AWS SES: email-smtp.<região>.amazonaws.com,
    * 587 + Seguro=false [STARTTLS] ou 465 + Seguro=true). Modo "simulado" não envia nada, só registra

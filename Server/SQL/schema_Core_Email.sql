@@ -1,4 +1,5 @@
 -- Log de envios do WS-Core_Email. Uma linha por pedido que chegou a tentar o envio.
+-- Datas em horário de São Paulo (gravadas pelo módulo; ver Relogio_Email.ts).
 -- Nunca guarda o corpo da mensagem, anexos nem credenciais; `erro` já vem sem segredos.
 CREATE TABLE IF NOT EXISTS _Core_Email_Envios (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -14,6 +15,8 @@ CREATE TABLE IF NOT EXISTS _Core_Email_Envios (
   template VARCHAR(64) NULL,
   qtd_anexos TINYINT UNSIGNED NOT NULL DEFAULT 0,
   tamanho_bytes INT UNSIGNED NOT NULL DEFAULT 0,
+  qtd_destinatarios INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'para+cc+bcc do pedido',
+  qtd_aceitos INT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'destinatários aceitos pelo servidor SMTP (é o que consome a cota)',
   transporte VARCHAR(20) NOT NULL,
   status ENUM('enviando','enviado','falhou') NOT NULL DEFAULT 'enviando',
   message_id VARCHAR(255) NULL,

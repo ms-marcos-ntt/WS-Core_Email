@@ -18,6 +18,9 @@
     "LocalArquivo": "./log/wscore_email/",
     "Rotatividade": 86400
   },
+  "WebFiles": {
+    "Pasta_Arquivos_Html": "./Views/_web"
+  },
   "SMTP": {
     "Modo": "smtp",
     "Host": "",

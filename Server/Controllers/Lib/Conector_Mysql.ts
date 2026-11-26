@@ -27,7 +27,9 @@ export class Conector_Mysql {
   public constructor(private readonly credentials: mysql.PoolOptions) {}
 
   public async Conectar(): Promise<void> {
-    if (!this.pool) this.pool = mysql.createPool({ ...this.credentials, multipleStatements: false, waitForConnections: true, connectionLimit: 10, queueLimit: 0 });
+    // dateStrings: DATETIME volta como texto "AAAA-MM-DD HH:MM:SS.mmm", sem conversão de fuso
+    // (o WS-Core_Email grava e consulta tudo no horário de São Paulo — ver Relogio_Email.ts).
+    if (!this.pool) this.pool = mysql.createPool({ ...this.credentials, multipleStatements: false, dateStrings: true, waitForConnections: true, connectionLimit: 10, queueLimit: 0 });
   }
 
   public async Query<T = QueryRow>(sql: string, values: unknown[] = []): Promise<T[]> {
